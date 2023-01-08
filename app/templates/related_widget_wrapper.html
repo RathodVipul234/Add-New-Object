@@ -1,0 +1,88 @@
+{% load i18n static %}
+<div class="related-widget-wrapper">
+    <div class="modal fade" id="add-related-{{popup_id}}" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"   aria-hidden="true">
+        <form method="POST" id="form_{{popup_id}}">
+          <div class="modal-dialog" role="document">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">Modal title</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                  <span aria-hidden="true">&times;</span>
+                </button>
+              </div>
+              <div class="modal-body">
+                {% csrf_token %}
+                {{ form_obj.as_p}}
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary close-popup_{{popup_id}}" data-dismiss="modal">Close</button>
+                <button type="button" id = "form_{{popup_id}}_submit_btn" class="btn btn-primary">Save changes</button>
+              </div>
+            </div>
+        </div>
+        <form>
+    </div>
+    {{ rendered_widget }}
+    {% block links %}
+        {% spaceless %}
+        {% if not is_hidden %}
+        {% if can_add_related %}
+        <a class="related-widget-wrapper-link add-related"data-toggle="modal" id="add_id_{{ name }}"
+            data-target="#add-related-{{popup_id}}"
+            title="{% blocktranslate %}Add another {{ model }}{% endblocktranslate %}">
+            <img src="{% static 'admin/img/icon-addlink.svg' %}" alt="{% translate 'Add' %}">
+        </a>
+        {% endif %}
+        {% endif %}
+        {% endspaceless %}
+    {% endblock %}
+</div>
+
+<script type="text/javascript">
+    function getCookie(name) {
+        var cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            var cookies = document.cookie.split(';');
+            for (var i = 0; i < cookies.length; i++) {
+                var cookie = jQuery.trim(cookies[i]);
+                // Does this cookie string begin with the name we want?
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    var csrftoken = getCookie('csrftoken');
+    $('input').removeAttr('required');
+    $(document).on('click', "#form_{{popup_id}}_submit_btn", function(e){
+        var serializedData = $('#add-related-{{popup_id}}').find(
+            'select, textarea, input').serialize();
+        $.ajax({
+            type: 'POST',
+            url: "{{submit_url}}",
+            data: serializedData,
+            headers:{
+                "X-CSRFToken": csrftoken
+            },
+            success: function(response){
+                if (response['status'] == 200){
+                    if ($('#id_{{ name }} option').length == 0){
+                        new_element = `<option value="${response['data']['id']}" selected>${response['data']['value']}</option>`
+                        $('#id_{{ name }}').append(new_element);
+                    }else{
+                        new_element = $("#id_{{ name }} option:last").clone()[0];
+                        new_element.value = response['data']['id']
+                        new_element.selected = true
+                        new_element.text = response['data']['value']
+                        $('#id_{{ name }}').append(new_element);
+                    }
+                }else{
+                    alert("Something went wrong")
+                }
+                $(".close-popup_{{popup_id}}").click()
+            }
+        })
+    })
+</script>
